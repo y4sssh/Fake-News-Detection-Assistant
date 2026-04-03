@@ -4,3 +4,6 @@ transformers
 torch
 validators
 newspaper3k
+pymongo
+python-dotenv
+dnspython

@@ -1,10 +1,30 @@
 from urllib.parse import urlparse
+
 import validators
 from newspaper import Article
 
 TRUSTED_SOURCES = [
-    "bbc.com", "reuters.com", "apnews.com", "theguardian.com"
+    "bbc.com",
+    "reuters.com",
+    "apnews.com",
+    "theguardian.com",
+    "npr.org",
+    "aljazeera.com",
 ]
+
+SUSPICIOUS_KEYWORDS = [
+    "shocking",
+    "miracle",
+    "secret",
+    "hidden truth",
+    "must watch",
+    "share this",
+    "urgent",
+    "doctors hate",
+    "breaking",
+    "100% proof",
+]
+
 
 def extract_text(input_data):
     if validators.url(input_data):
@@ -13,16 +33,34 @@ def extract_text(input_data):
             article.download()
             article.parse()
             return article.text, input_data
-        except:
+        except Exception:
             return None, input_data
     return input_data, None
 
+
 def check_source(url):
     if not url:
-        return 50  # neutral
+        return 50
 
-    domain = urlparse(url).netloc
+    domain = urlparse(url).netloc.lower()
     for trusted in TRUSTED_SOURCES:
         if trusted in domain:
             return 90
     return 30
+
+
+def split_into_sentences(text):
+    cleaned = text.replace("!", ".").replace("?", ".")
+    return [sentence.strip() for sentence in cleaned.split(".") if sentence.strip()]
+
+
+def find_suspicious_sentences(text):
+    sentences = split_into_sentences(text)
+    flagged = []
+
+    for sentence in sentences:
+        lowered = sentence.lower()
+        if any(keyword in lowered for keyword in SUSPICIOUS_KEYWORDS):
+            flagged.append(sentence)
+
+    return flagged[:5]
