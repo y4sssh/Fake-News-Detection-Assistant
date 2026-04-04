@@ -101,11 +101,12 @@ docker run -d -p 27017:27017 --name fake-news-mongo mongo:latest
 
 ## 🚀 Next Steps (TODO.md)
 
-- Mongo Atlas cloud
-- Better ML model (RoBERTa fake news fine-tune)
-- User auth
-- More trusted sources
-- Screenshot badges
+✅ RoBERTa ML + expanded sources (Phase 1 done)
+- [ ] User auth (JWT)
+- [ ] Screenshot badges (Vision API)
+- [ ] Mongo Atlas full guide
+
+See TODO.md for progress.
 
 ## 📄 License
 
