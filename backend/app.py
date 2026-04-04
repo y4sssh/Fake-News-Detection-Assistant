@@ -1,21 +1,21 @@
 import os
 from datetime import datetime
 
-from bson.objectid import ObjectId
+from pymongo import ObjectId
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from pymongo import MongoClient
 from transformers import pipeline
 
-from utils import check_source, extract_text, find_suspicious_sentences
+from utils import check_source, extract_text, find_suspicious_sentences, load_roberta_model
 
 load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
-classifier = pipeline("sentiment-analysis")
+classifier = load_roberta_model()
 
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
 DB_NAME = os.getenv("MONGO_DB_NAME", "fake_news_ai")
@@ -40,11 +40,18 @@ def serialize_history_item(item):
 
 
 def analyze_text(text):
-    result = classifier(text[:512])[0]
+    result = classifier(text[:512])
 
-    if result["label"] == "POSITIVE":
-        return 70 + result["score"] * 30
-    return 30 - result["score"] * 30
+    if isinstance(result, list) and len(result) > 0:
+        scores = {r['label']: r['score'] for r in result}
+        fake_score = scores.get('FAKE', 0) or (1 - scores.get('REAL', 0.5))
+        return max(0, 100 * (1 - fake_score))
+    else:
+        # Fallback sentiment
+        result = result[0] if isinstance(result, list) else result
+        if result["label"] == "POSITIVE":
+            return 70 + result["score"] * 30
+        return 30 - result["score"] * 30
 
 
 @app.route("/", methods=["GET"])

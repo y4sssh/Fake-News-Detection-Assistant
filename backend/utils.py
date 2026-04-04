@@ -10,6 +10,13 @@ TRUSTED_SOURCES = [
     "theguardian.com",
     "npr.org",
     "aljazeera.com",
+    "nytimes.com",
+    "cnn.com",
+    "wsj.com",
+    "washingtonpost.com",
+    "politifact.com",
+    "snopes.com",
+    "factcheck.org",
 ]
 
 SUSPICIOUS_KEYWORDS = [
@@ -64,3 +71,17 @@ def find_suspicious_sentences(text):
             flagged.append(sentence)
 
     return flagged[:5]
+
+def load_roberta_model():
+    """Load RoBERTa fake news classifier."""
+
+    try:
+        from transformers import pipeline
+        return pipeline(
+            "text-classification",
+            model="cardiffnlp/twitter-roberta-base-fake-gen",
+            return_all_scores=True
+        )
+    except Exception:
+        from transformers import pipeline
+        return pipeline("sentiment-analysis")  # Fallback

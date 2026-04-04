@@ -2,9 +2,9 @@ flask
 flask-cors
 transformers
 torch
+accelerate
 validators
 newspaper3k
 pymongo
 python-dotenv
 dnspython
-bson
