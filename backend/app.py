@@ -9,6 +9,10 @@ from pymongo import MongoClient
 from transformers import pipeline
 
 from utils import check_source, extract_text, find_suspicious_sentences, load_roberta_model
+import auth
+
+
+
 
 load_dotenv()
 
@@ -87,7 +91,7 @@ def health():
 
 
 @app.route("/analyze", methods=["POST"])
-@jwt_required()
+@auth.require_auth
 def analyze():
     data = request.json or {}
     input_data = (data.get("input") or "").strip()
@@ -139,10 +143,11 @@ def analyze():
 
 
 @app.route("/history", methods=["GET"])
-@jwt_required()
+@auth.require_auth
 def get_history():
     items = history_collection.find().sort("created_at", -1).limit(20)
     return jsonify([serialize_history_item(item) for item in items])
+
 
 
 @app.route("/history/<history_id>", methods=["DELETE"])

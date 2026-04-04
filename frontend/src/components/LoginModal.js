@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+
 
 const LoginModal = ({ isOpen, onClose, onLogin }) => {
   const [isLogin, setIsLogin] = useState(true);
@@ -37,9 +38,18 @@ const LoginModal = ({ isOpen, onClose, onLogin }) => {
     }
   };
 
+  const backdropRef = useRef(null);
+
+  const handleOverlayClick = (e) => {
+    if (e.target === backdropRef.current) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" ref={backdropRef} onClick={handleOverlayClick}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
+
         <button className="modal-close" onClick={onClose}>×</button>
         <h2>{isLogin ? 'Sign In' : 'Register'}</h2>
         

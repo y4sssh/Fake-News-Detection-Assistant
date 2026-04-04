@@ -17,7 +17,6 @@ def init_db(client):
     db = client[app.config.get('MONGO_DB_NAME', 'fake_news_ai')]
     users_collection = db['users']
 
-@app.route('/register', methods=['POST'])
 def register():
     data = request.get_json()
     email = data.get('email')
@@ -37,7 +36,6 @@ def register():
 
     return jsonify({'message': 'User created successfully'})
 
-@app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
     email = data.get('email')
@@ -49,6 +47,7 @@ def login():
 
     access_token = create_access_token(identity=email)
     return jsonify(access_token=access_token)
+
 
 def require_auth(f):
     @jwt_required()
