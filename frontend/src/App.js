@@ -1,50 +1,114 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import './App.css';
 
+const API_BASE_URL = 'http://127.0.0.1:5000';
+
 const trustPoints = [
-  'Credibility scoring powered by ML',
+  'React-based analyzer workflow',
+  'Flask API integration',
   'Suspicious sentence highlighting',
   'MongoDB-backed history support',
-  'Dark mode ready experience',
-];
-
-const activityItems = [
-  {
-    title: 'Election update article',
-    verdict: 'Likely credible',
-    score: '87%',
-    tone: 'safe',
-  },
-  {
-    title: 'Health miracle headline',
-    verdict: 'Needs review',
-    score: '41%',
-    tone: 'warn',
-  },
-  {
-    title: 'Breaking market alert',
-    verdict: 'Moderate risk',
-    score: '58%',
-    tone: 'review',
-  },
-];
-
-const reviewSignals = [
-  'Emotional or exaggerated wording detected',
-  'Source credibility appears limited',
-  'Fact-check verification recommended',
 ];
 
 function App() {
   const [theme, setTheme] = useState('light');
+  const [input, setInput] = useState('');
+  const [result, setResult] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     document.body.setAttribute('data-theme', theme);
   }, [theme]);
 
+  useEffect(() => {
+    fetchHistory();
+  }, []);
+
+  const flaggedSentences = useMemo(
+    () => result?.suspicious_sentences || [],
+    [result]
+  );
+
   const toggleTheme = () => {
     setTheme((currentTheme) => (currentTheme === 'light' ? 'dark' : 'light'));
   };
+
+  const fetchHistory = async () => {
+    try {
+      setHistoryLoading(true);
+      const response = await fetch(`${API_BASE_URL}/history`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch history');
+      }
+
+      setHistory(Array.isArray(data) ? data : []);
+    } catch (fetchError) {
+      setHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const handleAnalyze = async () => {
+    if (!input.trim()) {
+      setError('Please enter a headline, article text, or URL first.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError('');
+
+      const response = await fetch(`${API_BASE_URL}/analyze`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ input }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Analysis failed');
+      }
+
+      setResult(data);
+      fetchHistory();
+    } catch (requestError) {
+      setResult(null);
+      setError(requestError.message || 'Unable to connect to backend.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteHistory = async (id) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/history/${id}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Unable to delete history item');
+      }
+
+      setHistory((currentHistory) =>
+        currentHistory.filter((item) => item.id !== id)
+      );
+    } catch (deleteError) {
+      setError(deleteError.message || 'Failed to delete history item.');
+    }
+  };
+
+  const scoreValue = result?.score ? Math.max(0, Math.min(100, result.score)) : 0;
 
   return (
     <div className="app">
@@ -56,7 +120,7 @@ function App() {
               <div>
                 <p className="brand__title">Fake News Detection Assistant</p>
                 <span className="brand__subtitle">
-                  Professional verification with a friendly user experience
+                  React frontend with Flask and MongoDB integration
                 </span>
               </div>
             </div>
@@ -72,21 +136,24 @@ function App() {
 
           <div className="hero__layout">
             <section className="hero__content">
-              <span className="eyebrow">AI credibility workspace</span>
-              <h1>Check news quickly, understand results clearly, and share with confidence.</h1>
+              <span className="eyebrow">Full React Experience</span>
+              <h1>Analyze suspicious news with a real frontend-to-backend workflow.</h1>
               <p className="hero__description">
-                This interface is designed to feel trustworthy, calm, and modern.
-                It helps users detect misinformation using machine learning,
-                suspicious sentence detection, confidence scoring, and history
-                tracking without feeling intimidating.
+                This interface now works as a React application connected to
+                your Flask backend. Users can submit content, receive AI-based
+                credibility results, view suspicious sentences, and revisit
+                stored MongoDB history.
               </p>
 
               <div className="hero__actions">
-                <button className="button button--primary">
-                  Analyze a Headline
+                <button className="button button--primary" onClick={handleAnalyze}>
+                  {loading ? 'Analyzing...' : 'Analyze Now'}
                 </button>
-                <button className="button button--secondary">
-                  View Example Report
+                <button
+                  className="button button--secondary"
+                  onClick={fetchHistory}
+                >
+                  Refresh History
                 </button>
               </div>
 
@@ -101,45 +168,53 @@ function App() {
 
             <aside className="hero-card">
               <div className="card-header">
-                <span className="card-chip">Live Preview</span>
-                <span className="status status--warn">Needs Review</span>
+                <span className="card-chip">Backend Status</span>
+                <span className={`status ${result ? 'status--safe' : 'status--review'}`}>
+                  {result ? 'Connected' : 'Waiting'}
+                </span>
               </div>
 
-              <h2>Article credibility snapshot</h2>
+              <h2>Live credibility preview</h2>
               <p className="hero-card__text">
-                The assistant combines machine learning output, trusted-source
-                checks, and highlighted risky phrasing to explain why a result
-                may require caution.
+                Submit text or a URL to run the Flask `/analyze` endpoint and
+                instantly display credibility score, suspicious lines, and
+                fact-check resources in this React UI.
               </p>
 
               <div className="score-block">
-                <div className="score-circle">
-                  <strong>41%</strong>
+                <div
+                  className="score-circle"
+                  style={{
+                    background: `radial-gradient(circle at center, white 58%, transparent 59%), conic-gradient(var(--warn) 0 ${scoreValue}%, #dde6f3 ${scoreValue}% 100%)`,
+                  }}
+                >
+                  <strong>{result ? `${result.score}%` : '--'}</strong>
                   <span>Trust score</span>
                 </div>
 
                 <div className="score-details">
                   <div>
-                    <label>Model confidence</label>
+                    <label>Overall credibility</label>
                     <div className="progress">
-                      <span style={{ width: '41%' }} />
+                      <span style={{ width: `${scoreValue}%` }} />
                     </div>
                   </div>
                   <div>
                     <label>Source quality</label>
                     <div className="progress progress--soft">
-                      <span style={{ width: '54%' }} />
+                      <span
+                        style={{
+                          width: `${result?.source_score ? result.source_score : 0}%`,
+                        }}
+                      />
                     </div>
                   </div>
                 </div>
               </div>
 
               <div className="friendly-note">
-                <p className="friendly-note__title">Suggested action</p>
-                <p>
-                  Review the highlighted lines and verify with trusted sources
-                  before sharing.
-                </p>
+                <p className="friendly-note__title">Current result</p>
+                <p>{result ? result.warning : 'No analysis yet. Start with a headline or URL.'}</p>
               </div>
             </aside>
           </div>
@@ -151,9 +226,8 @@ function App() {
               <span className="eyebrow">Analyzer</span>
               <h2>Paste text, link, or headline</h2>
               <p>
-                Users can submit content and receive an explainable result with
-                confidence score, suspicious sentences, and trusted fact-check
-                suggestions.
+                This input is now connected to your Flask backend and returns
+                real API data instead of static demo content.
               </p>
             </div>
 
@@ -162,47 +236,81 @@ function App() {
                 <label htmlFor="news-input">News content</label>
                 <textarea
                   id="news-input"
-                  readOnly
+                  value={input}
+                  onChange={(event) => setInput(event.target.value)}
                   placeholder="Paste suspicious content or a news URL here..."
                 />
                 <div className="workspace__actions">
-                  <button className="button button--primary button--wide">
-                    Run Detection
+                  <button
+                    className="button button--primary button--wide"
+                    onClick={handleAnalyze}
+                    disabled={loading}
+                  >
+                    {loading ? 'Running Detection...' : 'Run Detection'}
                   </button>
                 </div>
+
+                {error ? <p className="feedback feedback--error">{error}</p> : null}
               </div>
 
               <div className="workspace__result">
                 <div className="result-header">
                   <div>
                     <span className="result-header__label">Prediction</span>
-                    <h3>Potential misinformation detected</h3>
+                    <h3>
+                      {result ? result.warning : 'Potential misinformation detected'}
+                    </h3>
                   </div>
                   <span className="status status--review">Explainable AI</span>
                 </div>
 
                 <div className="metric-grid">
                   <article className="metric-card">
-                    <strong>84%</strong>
-                    <span>Risk indicator</span>
+                    <strong>{result ? `${result.score}%` : '--'}</strong>
+                    <span>Credibility score</span>
                   </article>
                   <article className="metric-card">
-                    <strong>3</strong>
+                    <strong>{flaggedSentences.length}</strong>
                     <span>Flagged sentences</span>
                   </article>
                   <article className="metric-card">
-                    <strong>2</strong>
+                    <strong>{result?.fact_check_links?.length || 0}</strong>
                     <span>Fact-check links</span>
                   </article>
                 </div>
 
                 <div className="signal-box">
-                  <h4>Why this was flagged</h4>
-                  <ul>
-                    {reviewSignals.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
+                  <h4>Suspicious sentences</h4>
+                  {flaggedSentences.length ? (
+                    <ul>
+                      {flaggedSentences.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="empty-state">
+                      Suspicious sentences will appear here after analysis.
+                    </p>
+                  )}
+                </div>
+
+                <div className="signal-box">
+                  <h4>Fact-check resources</h4>
+                  {result?.fact_check_links?.length ? (
+                    <ul className="links-list">
+                      {result.fact_check_links.map((link) => (
+                        <li key={link}>
+                          <a href={link} target="_blank" rel="noreferrer">
+                            {link}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="empty-state">
+                      Fact-check links will appear here after analysis.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -211,47 +319,61 @@ function App() {
           <section className="panel panel--history">
             <div className="section-copy">
               <span className="eyebrow">History</span>
-              <h2>Recent activity with database support</h2>
+              <h2>Recent activity from MongoDB</h2>
               <p>
-                Analysis history can be stored in MongoDB so users can revisit
-                previous checks in a professional dashboard.
+                Saved analysis results are fetched from your Flask backend and
+                rendered here inside the React dashboard.
               </p>
             </div>
 
             <div className="history-list">
-              {activityItems.map((item) => (
-                <article className="history-card" key={item.title}>
-                  <div className="history-card__top">
-                    <div>
-                      <h3>{item.title}</h3>
-                      <p>{item.verdict}</p>
+              {historyLoading ? (
+                <div className="history-empty">Loading saved history...</div>
+              ) : history.length ? (
+                history.map((item) => (
+                  <article className="history-card" key={item.id}>
+                    <div className="history-card__top">
+                      <div>
+                        <h3>{item.warning}</h3>
+                        <p>{item.text_preview || item.input}</p>
+                      </div>
+                      <span
+                        className={`status ${
+                          item.score > 60 ? 'status--safe' : 'status--warn'
+                        }`}
+                      >
+                        {item.score}%
+                      </span>
                     </div>
-                    <span
-                      className={`status ${
-                        item.tone === 'safe'
-                          ? 'status--safe'
-                          : item.tone === 'review'
-                          ? 'status--review'
-                          : 'status--warn'
-                      }`}
-                    >
-                      {item.score}
-                    </span>
-                  </div>
-                </article>
-              ))}
+
+                    <div className="history-card__footer">
+                      <span>{item.created_at || 'Saved result'}</span>
+                      <button
+                        className="button button--ghost button--small"
+                        onClick={() => handleDeleteHistory(item.id)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <div className="history-empty">
+                  No saved history found yet. Run your first analysis.
+                </div>
+              )}
             </div>
           </section>
 
           <section className="panel panel--footer">
             <div>
-              <span className="eyebrow">Presentation Ready</span>
-              <h2>Balanced design: professional, friendly, and easy to trust</h2>
+              <span className="eyebrow">Integrated Product</span>
+              <h2>Plain frontend converted into a connected React application</h2>
             </div>
             <p>
-              This version uses softer visual styling, clearer spacing, lighter
-              language, and a more polished dashboard structure so it feels more
-              mature while still welcoming to users.
+              Your project now has a React-based UI flow for input, result
+              rendering, suspicious sentence display, fact-check links, theme
+              toggling, and MongoDB history integration through the Flask API.
             </p>
           </section>
         </main>
