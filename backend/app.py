@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 
-from pymongo import ObjectId
+from bson import ObjectId
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -87,6 +87,7 @@ def health():
 
 
 @app.route("/analyze", methods=["POST"])
+@jwt_required()
 def analyze():
     data = request.json or {}
     input_data = (data.get("input") or "").strip()
@@ -138,6 +139,7 @@ def analyze():
 
 
 @app.route("/history", methods=["GET"])
+@jwt_required()
 def get_history():
     items = history_collection.find().sort("created_at", -1).limit(20)
     return jsonify([serialize_history_item(item) for item in items])
@@ -155,6 +157,12 @@ def delete_history(history_id):
 
     return jsonify({"message": "History item deleted successfully"})
 
+
+from auth import init_auth, init_db
+
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'super-secret-dev-key-change-in-prod')
+init_auth(app)
+init_db(mongo_client)
 
 if __name__ == "__main__":
     app.run(debug=True)

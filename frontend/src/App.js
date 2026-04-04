@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import './App.css';
+import LoginModal from './components/LoginModal';
 
 const API_BASE_URL = 'http://127.0.0.1:5000';
 
@@ -8,7 +9,8 @@ const trustPoints = [
   'Flask API integration',
   'Suspicious sentence highlighting',
   'MongoDB-backed history support',
-];
+  'User authentication system',
+]; 
 
 function App() {
   const [theme, setTheme] = useState('light');
@@ -18,14 +20,22 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [token, setToken] = useState(localStorage.getItem('token') || '');
+  const [showLogin, setShowLogin] = useState(false);
 
   useEffect(() => {
     document.body.setAttribute('data-theme', theme);
-  }, [theme]);
+    if (token) {
+      setIsAuthenticated(true);
+    }
+  }, [theme, token]);
 
   useEffect(() => {
-    fetchHistory();
-  }, []);
+    if (isAuthenticated) {
+      fetchHistory();
+    }
+  }, [isAuthenticated]); 
 
   const flaggedSentences = useMemo(
     () => result?.suspicious_sentences || [],
@@ -129,9 +139,26 @@ function App() {
               <button className="button button--ghost" onClick={toggleTheme}>
                 {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
               </button>
-              <button className="button button--ghost">Sign In</button>
-              <button className="button button--primary">Start Analysis</button>
+              {!isAuthenticated ? (
+                <button className="button button--ghost" onClick={() => setShowLogin(true)}>
+                  Sign In
+                </button>
+              ) : (
+                <span className="user-status">Authenticated ✓</span>
+              )}
+              <button 
+                className="button button--primary" 
+                onClick={handleAnalyze}
+                disabled={!isAuthenticated || loading}
+              >
+                {loading ? 'Analyzing...' : 'Start Analysis'}
+              </button>
             </div>
+            <LoginModal 
+              isOpen={showLogin} 
+              onClose={() => setShowLogin(false)} 
+              onLogin={setToken} 
+            />
           </nav>
 
           <div className="hero__layout">
