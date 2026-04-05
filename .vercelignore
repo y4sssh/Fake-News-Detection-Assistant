@@ -1,0 +1,14 @@
+backend/
+.env
+.env.local
+.env.*.local
+node_modules/
+npm-debug.log
+*.log
+.git/
+.gitignore
+README.md
+TODO.md
+INTERNATIONAL_*
+git-install-fix.md
+*.md
