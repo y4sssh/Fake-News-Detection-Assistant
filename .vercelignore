@@ -1,4 +1,5 @@
 backend/
+api/
 .env
 .env.local
 .env.*.local
@@ -12,3 +13,5 @@ TODO.md
 INTERNATIONAL_*
 git-install-fix.md
 *.md
+vercel.json
+
