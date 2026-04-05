@@ -43,7 +43,7 @@ function App() {
 
     try {
       const endpoint = isLoggedIn ? '/analyze' : '/analyze_guest';
-      const apiUrl = `http://${window.location.hostname}:5000${endpoint}`;
+      const apiUrl = `https://fake-news-backend-production-a1ab.up.railway.app${endpoint}`;
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
