@@ -1,0 +1,13 @@
+{
+  "name": "fake-news-ai",
+  "version": "1.0.0",
+  "description": "Fake news detection assistant",
+  "private": true,
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build",
+    "start": "cd frontend && node api/index.js"
+  },
+  "keywords": ["fake-news", "ai", "detection"],
+  "author": "",
+  "license": "MIT"
+}
