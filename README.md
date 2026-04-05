@@ -1,18 +1,23 @@
-# Fake News Detection Assistant 📰🔍
+# 🚀 Fake News Detection Assistant
 
-[![Backend Status](http://127.0.0.1:5000/health)](http://127.0.0.1:5000/health)
-[![Frontend](http://127.0.0.1:3000)](http://127.0.0.1:3000)
+> 🧠 AI-powered system to detect fake vs real news using Machine Learning & NLP
 
-AI-powered web app to detect fake news using ML credibility scoring, source analysis, suspicious sentence detection, with React UI and MongoDB history.
+<p align="center">
+  <img src="https://img.shields.io/badge/AI-Fake%20News%20Detection-blue?style=for-the-badge&logo=python"/>
+  <img src="https://img.shields.io/badge/Status-Active-success?style=for-the-badge"/>
+  <img src="https://img.shields.io/badge/License-MIT-orange?style=for-the-badge"/>
+</p>
 
-## ✨ Features
+---
 
-- **Live Credibility Preview & Analyzer**: Paste text/link/headline for instant score (0-100)
-- **Prediction & Misinformation Detection**: \"Credible ✅\" or \"Possibly Fake ⚠️\"
-- **Explainable AI**: Source score, flagged suspicious sentences, fact-check links
-- **Backend Status**: Health check (Mongo connected/disconnected)
-- **History**: Recent analyses saved/retrieved from MongoDB (20 latest, delete)
-- **React UI**: Modern interface with theme toggle, metrics, history dashboard
+## 🌟 Introduction
+
+The **Fake News Detection Assistant** is an intelligent system that analyzes news articles and predicts whether they are **REAL 🟢 or FAKE 🔴** using Machine Learning techniques.
+
+In today's digital world, misinformation spreads rapidly. This project helps combat fake news using **Natural Language Processing (NLP)** and classification models.
+
+---
+
 
 ## 🏗️ Architecture
 
@@ -23,91 +28,195 @@ Frontend (React) → Backend (Flask + Transformers + Torch) → MongoDB (History
                     validators (URL check)
 ```
 
-## 🚀 Quick Start
 
-### Prerequisites
-- Python 3.12+
-- Node.js
-- Docker (MongoDB)
+## 🎬 Demo
 
-### Backend (http://localhost:5000)
+<p align="center">
+  <img src="https://media.giphy.com/media/l0HlBO7eyXzSZkJri/giphy.gif" width="600"/>
+</p>
+
+---
+
+## 📌 Table of Contents
+
+* [✨ Features](#-features)
+* [⚙️ Installation](#️-installation)
+* [🚀 Usage](#-usage)
+* [🧠 Models Used](#-models-used)
+* [📂 Project Structure](#-project-structure)
+* [⚙️ Configuration](#️-configuration)
+* [📊 Example](#-example)
+* [🐞 Troubleshooting](#-troubleshooting)
+* [👨‍💻 Contributors](#-contributors)
+* [📜 License](#-license)
+
+---
+
+## ✨ Features
+
+✨ Data preprocessing & cleaning
+🤖 Machine Learning-based classification
+📊 Model evaluation & comparison
+⚡ Fast real-time predictions
+🌐 Interactive UI (Streamlit supported)
+📈 Visual insights & results
+
+---
+
+## ⚙️ Installation
+
+### 📥 Clone Repository
+
 ```bash
-cd fake-news-ai/backend
-python -m venv venv
-.venv/Scripts/Activate.ps1  # Windows
+git clone https://github.com/y4sssh/Fake-News-Detection-Assistant.git
+cd Fake-News-Detection-Assistant
+```
+
+### 📦 Install Dependencies
+
+```bash
 pip install -r requirements.txt
+```
+
+---
+
+## 🚀 Usage
+
+### ▶️ Run the App
+
+```bash
+streamlit run app.py
+```
+
+or
+
+```bash
 python app.py
 ```
 
-Test:
+### 🧪 How It Works
+
+1. Enter a news headline or article
+2. Model processes the text
+3. Output prediction:
+
+* 🟢 Real News
+* 🔴 Fake News
+
+---
+
+## 🧠 Models Used
+
+* 📌 Naive Bayes
+* 🌲 Random Forest
+* 🔍 TF-IDF Vectorization
+* 🧬 LSTM (optional deep learning)
+
+---
+
+## 📂 Project Structure
+
 ```bash
-curl http://localhost:5000/health
-curl -X POST -H "Content-Type: application/json" -d "{\"input\": \"Shocking miracle!\"}" http://localhost:5000/analyze
+Fake-News-Detection-Assistant/
+│
+├── app.py
+├── model.pkl
+├── vectorizer.pkl
+├── requirements.txt
+├── data/
+├── notebooks/
+└── README.md
 ```
 
-### Frontend (http://localhost:3000)
-```bash
-cd fake-news-ai/frontend
-npm install
-npm start
+---
+
+## ⚙️ Configuration
+
+You can customize:
+
+* Model parameters (inside notebooks)
+* Dataset location
+* UI design in `app.py`
+
+---
+
+## 📊 Example
+
+```text
+Input:
+"Breaking: Aliens have landed on Earth!"
+
+Output:
+🔴 Fake News
 ```
 
-### MongoDB (History)
+---
+
+## 🐞 Troubleshooting
+
+❗ Missing dependencies
+→ Run: `pip install -r requirements.txt`
+
+❗ Model file not found
+→ Ensure `.pkl` files exist in root directory
+
+❗ App not launching
+→ Check Python version (>=3.8 recommended)
+
+---
+
+## 🎨 GitHub Stats
+
+<p align="center">
+  <img src="https://github-readme-stats.vercel.app/api?username=y4sssh&show_icons=true&theme=tokyonight"/>
+  <img src="https://github-readme-streak-stats.herokuapp.com/?user=y4sssh&theme=tokyonight"/>
+</p>
+
+---
+
+## 👨‍💻 Contributors
+
+* 👤 **Yash** (Project Owner)
+* 💡 Contributions are welcome!
+
+---
+
+## 🤝 Contributing
+
 ```bash
-docker run -d -p 27017:27017 --name fake-news-mongo mongo:latest
+1. Fork the repo
+2. Clone your fork
+3. Create a new branch
+4. Make changes
+5. Push and open a Pull Request
 ```
 
-## 📋 API Endpoints
+---
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | Welcome |
-| `/health` | GET | Status (Mongo ping) |
-| `/analyze` | POST `{input: str}` | Analyze text/URL |
-| `/history` | GET | Recent 20 analyses |
-| `/history/:id` | DELETE | Delete item |
+## 📜 License
 
-## 🔧 Tech Stack
+This project is licensed under the **MIT License**
 
-- **Frontend**: React, Tailwind-like CSS
-- **Backend**: Flask, CORS
-- **ML**: HuggingFace Transformers (sentiment), Torch
-- **Extract**: newspaper3k
-- **DB**: MongoDB + PyMongo
-- **Utils**: validators, suspicious keywords
+---
 
-## 🤖 How Analyzer Works
+## 💡 Future Improvements
 
-1. Extract text from URL/text (newspaper3k)
-2. NLP score: Sentiment pipeline (positive → credible)
-3. Source score: Trusted domains (BBC, Reuters...)
-4. Suspicious sentences: Keyword match (shocking, miracle...)
-5. Final score = 0.7*NLP + 0.3*source
-6. Save history MongoDB
+🚀 Add BERT / Transformer models
+📡 Integrate real-time news APIs
+🧠 Improve model accuracy
+🌍 Deploy to cloud (AWS / GCP / Render)
 
-## 📱 Demo UI
+---
 
-- Hero: Theme toggle, Analyze button
-- Analyzer: Paste input, run detection, metrics cards, suspicious list
-- History: Recent cards with delete
-- Backend Status: Waiting → Connected
+## ⭐ Support
 
-## 🐛 Troubleshooting
+If you found this useful:
 
-- Mongo disconnected: Run Docker container
-- Transformers slow first run: Downloads ~500MB model
-- Port busy: npm start --port 3001
-- Windows venv: Set-ExecutionPolicy RemoteSigned
+👉 Star ⭐ this repository
+👉 Share with others
 
-## 🚀 Next Steps (TODO.md)
+---
 
-✅ RoBERTa ML + expanded sources (Phase 1 done)
-- [ ] User auth (JWT)
-- [ ] Screenshot badges (Vision API)
-- [ ] Mongo Atlas full guide
+<h3 align="center">💬 "Fighting misinformation with AI!"</h3>
 
-See TODO.md for progress.
 
-## 📄 License
-
-MIT
