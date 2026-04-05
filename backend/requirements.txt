@@ -1,5 +1,6 @@
 flask
 flask-cors
+flask-jwt-extended
 transformers
 torch
 accelerate
@@ -8,3 +9,4 @@ newspaper3k
 pymongo
 python-dotenv
 dnspython
+bcrypt

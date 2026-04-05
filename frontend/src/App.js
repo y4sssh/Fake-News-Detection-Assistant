@@ -1,80 +1,50 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useState, useEffect } from 'react';
 import './App.css';
 import LoginModal from './components/LoginModal';
-
-const API_BASE_URL = 'http://127.0.0.1:5000';
-
-const trustPoints = [
-  'React-based analyzer workflow',
-  'Flask API integration',
-  'Suspicious sentence highlighting',
-  'MongoDB-backed history support',
-  'User authentication system',
-]; 
+import { getTranslation } from './i18n';
 
 function App() {
-  const [theme, setTheme] = useState('light');
+  const [isLoggedIn, setIsLoggedIn] = useState(true); // Auto-login enabled for all features
+  const [showLogin, setShowLogin] = useState(false);
   const [input, setInput] = useState('');
   const [result, setResult] = useState(null);
-  const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [historyLoading, setHistoryLoading] = useState(true);
   const [error, setError] = useState('');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [token, setToken] = useState(localStorage.getItem('token') || '');
-  const [showLogin, setShowLogin] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
+  const [language, setLanguage] = useState(() => localStorage.getItem('language') || 'en');
+  const [history, setHistory] = useState(() => JSON.parse(localStorage.getItem('analysisHistory')) || []);
+  const [showHistory, setShowHistory] = useState(false);
+  const [clipboard, setClipboard] = useState(false);
+
+  const t = getTranslation(language);
 
   useEffect(() => {
-    document.body.setAttribute('data-theme', theme);
-    if (token) {
-      setIsAuthenticated(true);
-    }
-  }, [theme, token]);
+    document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+    localStorage.setItem('darkMode', darkMode);
+  }, [darkMode]);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchHistory();
-    }
-  }, [isAuthenticated]); 
+    localStorage.setItem('language', language);
+  }, [language]);
 
-  const flaggedSentences = useMemo(
-    () => result?.suspicious_sentences || [],
-    [result]
-  );
-
-  const toggleTheme = () => {
-    setTheme((currentTheme) => (currentTheme === 'light' ? 'dark' : 'light'));
-  };
-
-  const fetchHistory = async () => {
-    try {
-      setHistoryLoading(true);
-      const response = await fetch(`${API_BASE_URL}/history`);
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch history');
-      }
-
-      setHistory(Array.isArray(data) ? data : []);
-    } catch (fetchError) {
-      setHistory([]);
-    } finally {
-      setHistoryLoading(false);
-    }
-  };
+  useEffect(() => {
+    localStorage.setItem('analysisHistory', JSON.stringify(history));
+  }, [history]);
 
   const handleAnalyze = async () => {
     if (!input.trim()) {
-      setError('Please enter a headline, article text, or URL first.');
+      setError(t.messages.enterInput);
       return;
     }
 
-    try {
-      setLoading(true);
-      setError('');
+    setLoading(true);
+    setError('');
+    setResult(null);
 
-      const response = await fetch(`${API_BASE_URL}/analyze`, {
+    try {
+      const endpoint = isLoggedIn ? '/analyze' : '/analyze_guest';
+      const apiUrl = `http://${window.location.hostname}:5000${endpoint}`;
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -85,326 +55,322 @@ function App() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Analysis failed');
+        throw new Error(data.error || t.messages.error);
       }
 
       setResult(data);
-      fetchHistory();
-    } catch (requestError) {
-      setResult(null);
-      setError(requestError.message || 'Unable to connect to backend.');
+
+      // Add to history if logged in
+      if (isLoggedIn) {
+        const newEntry = {
+          id: Date.now(),
+          input: input,
+          result: data,
+          timestamp: new Date().toISOString(),
+        };
+        setHistory([newEntry, ...history.slice(0, 19)]);
+      }
+    } catch (err) {
+      setError(err.message || t.messages.networkError);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeleteHistory = async (id) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/history/${id}`, {
-        method: 'DELETE',
-      });
+  const handleLogin = () => {
+    setIsLoggedIn(true);
+    setShowLogin(false);
+  };
 
-      const data = await response.json();
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setResult(null);
+    setShowHistory(false);
+  };
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Unable to delete history item');
-      }
-
-      setHistory((currentHistory) =>
-        currentHistory.filter((item) => item.id !== id)
-      );
-    } catch (deleteError) {
-      setError(deleteError.message || 'Failed to delete history item.');
+  const handleCopyResult = () => {
+    if (result) {
+      const text = `Credibility Score: ${result.score}/100\nStatus: ${result.warning}\nSource Score: ${result.source_score}/100`;
+      navigator.clipboard.writeText(text);
+      setClipboard(true);
+      setTimeout(() => setClipboard(false), 2000);
     }
   };
 
-  const scoreValue = result?.score ? Math.max(0, Math.min(100, result.score)) : 0;
+  const handleExportResult = () => {
+    if (result) {
+      const dataStr = JSON.stringify({
+        input: input,
+        result: result,
+        timestamp: new Date().toISOString(),
+        language: language,
+      }, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `analysis-${Date.now()}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  const handleHistoryItem = (item) => {
+    setInput(item.input);
+    setResult(item.result);
+    setShowHistory(false);
+  };
+
+  const handleClearHistory = () => {
+    if (window.confirm('Clear all analysis history?')) {
+      setHistory([]);
+      setShowHistory(false);
+    }
+  };
 
   return (
     <div className="app">
-      <div className="page-shell">
-        <header className="hero">
-          <nav className="topbar">
-            <div className="brand">
-              <div className="brand__mark">FN</div>
-              <div>
-                <p className="brand__title">Fake News Detection Assistant</p>
-                <span className="brand__subtitle">
-                  React frontend with Flask and MongoDB integration
-                </span>
-              </div>
-            </div>
-
-            <div className="topbar__actions">
-              <button className="button button--ghost" onClick={toggleTheme}>
-                {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
-              </button>
-              {!isAuthenticated ? (
-                <button className="button button--ghost" onClick={() => setShowLogin(true)}>
-                  Sign In
-                </button>
-              ) : (
-                <span className="user-status">Authenticated ✓</span>
-              )}
-              <button 
-                className="button button--primary" 
-                onClick={handleAnalyze}
-                disabled={!isAuthenticated || loading}
-              >
-                {loading ? 'Analyzing...' : 'Start Analysis'}
-              </button>
-            </div>
-            <LoginModal 
-              isOpen={showLogin} 
-              onClose={() => setShowLogin(false)} 
-              onLogin={setToken} 
-            />
-          </nav>
-
-          <div className="hero__layout">
-            <section className="hero__content">
-              <span className="eyebrow">Full React Experience</span>
-              <h1>Analyze suspicious news with a real frontend-to-backend workflow.</h1>
-              <p className="hero__description">
-                This interface now works as a React application connected to
-                your Flask backend. Users can submit content, receive AI-based
-                credibility results, view suspicious sentences, and revisit
-                stored MongoDB history.
-              </p>
-
-              <div className="hero__actions">
-                <button className="button button--primary" onClick={handleAnalyze}>
-                  {loading ? 'Analyzing...' : 'Analyze Now'}
-                </button>
-                <button
-                  className="button button--secondary"
-                  onClick={fetchHistory}
-                >
-                  Refresh History
-                </button>
-              </div>
-
-              <div className="trust-points">
-                {trustPoints.map((item) => (
-                  <div className="trust-pill" key={item}>
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <aside className="hero-card">
-              <div className="card-header">
-                <span className="card-chip">Backend Status</span>
-                <span className={`status ${result ? 'status--safe' : 'status--review'}`}>
-                  {result ? 'Connected' : 'Waiting'}
-                </span>
-              </div>
-
-              <h2>Live credibility preview</h2>
-              <p className="hero-card__text">
-                Submit text or a URL to run the Flask `/analyze` endpoint and
-                instantly display credibility score, suspicious lines, and
-                fact-check resources in this React UI.
-              </p>
-
-              <div className="score-block">
-                <div
-                  className="score-circle"
-                  style={{
-                    background: `radial-gradient(circle at center, white 58%, transparent 59%), conic-gradient(var(--warn) 0 ${scoreValue}%, #dde6f3 ${scoreValue}% 100%)`,
-                  }}
-                >
-                  <strong>{result ? `${result.score}%` : '--'}</strong>
-                  <span>Trust score</span>
-                </div>
-
-                <div className="score-details">
-                  <div>
-                    <label>Overall credibility</label>
-                    <div className="progress">
-                      <span style={{ width: `${scoreValue}%` }} />
-                    </div>
-                  </div>
-                  <div>
-                    <label>Source quality</label>
-                    <div className="progress progress--soft">
-                      <span
-                        style={{
-                          width: `${result?.source_score ? result.source_score : 0}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="friendly-note">
-                <p className="friendly-note__title">Current result</p>
-                <p>{result ? result.warning : 'No analysis yet. Start with a headline or URL.'}</p>
-              </div>
-            </aside>
+      {/* Header */}
+      <header className="App-header">
+        <div className="header-left">
+          <h1>{t.header.title}</h1>
+          <span className="tagline">{t.header.tagline}</span>
+        </div>
+        <div className="header-center">
+          <select 
+            value={language} 
+            onChange={(e) => setLanguage(e.target.value)}
+            className="language-selector"
+            aria-label="Select language"
+          >
+            <option value="en">English</option>
+            <option value="es">Español</option>
+            <option value="fr">Français</option>
+            <option value="de">Deutsch</option>
+          </select>
+        </div>
+        <div className="header-right">
+          <button 
+            className="theme-toggle" 
+            onClick={() => setDarkMode(!darkMode)}
+            title={darkMode ? "Light Mode" : "Dark Mode"}
+            aria-label="Toggle theme"
+          >
+            {darkMode ? '☀️' : '🌙'}
+          </button>
+          <button
+            className="history-toggle"
+            onClick={() => setShowHistory(!showHistory)}
+            title="View history"
+            aria-label="View analysis history"
+          >
+            📋 {history.length}
+          </button>
+          <div className="user-status">
+            <button onClick={() => setShowLogin(true)} className="login-btn">
+              {t.buttons.login || 'Sign In'}
+            </button>
           </div>
-        </header>
+        </div>
+      </header>
 
-        <main className="main-grid">
-          <section className="panel panel--input">
-            <div className="section-copy">
-              <span className="eyebrow">Analyzer</span>
-              <h2>Paste text, link, or headline</h2>
-              <p>
-                This input is now connected to your Flask backend and returns
-                real API data instead of static demo content.
-              </p>
-            </div>
+      {/* History Panel */}
+      {showHistory && isLoggedIn && (
+        <div className="history-panel">
+          <div className="history-header">
+            <h3>📋 Analysis History</h3>
+            <button onClick={() => setShowHistory(false)} className="close-btn">✕</button>
+          </div>
+          <div className="history-list">
+            {history.length === 0 ? (
+              <p className="empty-state">No analysis history yet</p>
+            ) : (
+              history.map((item) => (
+                <div key={item.id} className="history-item" onClick={() => handleHistoryItem(item)}>
+                  <div className="history-preview">
+                    {item.input.substring(0, 60)}...
+                  </div>
+                  <div className="history-score">
+                    Score: {item.result.score}/100
+                  </div>
+                  <div className="history-time">
+                    {new Date(item.timestamp).toLocaleString()}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          {history.length > 0 && (
+            <button onClick={handleClearHistory} className="clear-history-btn">
+              {t.buttons.clearHistory}
+            </button>
+          )}
+        </div>
+      )}
 
-            <div className="workspace">
-              <div className="workspace__form">
-                <label htmlFor="news-input">News content</label>
-                <textarea
-                  id="news-input"
-                  value={input}
-                  onChange={(event) => setInput(event.target.value)}
-                  placeholder="Paste suspicious content or a news URL here..."
-                />
-                <div className="workspace__actions">
-                  <button
-                    className="button button--primary button--wide"
-                    onClick={handleAnalyze}
-                    disabled={loading}
+      {/* Main Content */}
+      <main className="main-content">
+        <div className="hero">
+          <h2>{t.hero.heading}</h2>
+          <p>{t.hero.subheading}</p>
+
+          <div className="input-section">
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={t.hero.placeholder}
+              rows={5}
+              spellCheck="true"
+              aria-label="Content to analyze"
+            />
+            <div className="input-actions">
+              <button
+                className={`button--primary ${loading ? 'button--loading' : ''}`}
+                onClick={handleAnalyze}
+                disabled={loading || !input.trim()}
+                aria-label="Analyze content"
+              >
+                {loading ? t.buttons.analyzing : t.buttons.analyze}
+                {loading && <span className="spinner"></span>}
+              </button>
+              {result && (
+                <div className="result-actions">
+                  <button 
+                    onClick={handleCopyResult}
+                    className="action-btn copy-btn"
+                    title="Copy results"
                   >
-                    {loading ? 'Running Detection...' : 'Run Detection'}
+                    {clipboard ? '✓ Copied' : '📋 Copy'}
+                  </button>
+                  <button 
+                    onClick={handleExportResult}
+                    className="action-btn export-btn"
+                    title="Export results"
+                  >
+                    📥 Export
                   </button>
                 </div>
+              )}
+            </div>
+          </div>
 
-                {error ? <p className="feedback feedback--error">{error}</p> : null}
-              </div>
+          <p className="guest-note">
+            <em>✨ All features unlocked and active</em>
+          </p>
+        </div>
 
-              <div className="workspace__result">
-                <div className="result-header">
-                  <div>
-                    <span className="result-header__label">Prediction</span>
-                    <h3>
-                      {result ? result.warning : 'Potential misinformation detected'}
-                    </h3>
+        {/* Error Message */}
+        {error && (
+          <div className="feedback feedback--error" role="alert">
+            <p>⚠️ {error}</p>
+          </div>
+        )}
+
+        {/* Results Section */}
+        {result && (
+          <div className="results-section">
+            <div className="signal-box">
+              <h3>📊 {t.results.title}</h3>
+              
+              <div className="trust-points">
+                <div className={`trust-pill score-${Math.round(result.score / 20)}`}>
+                  <strong>{t.results.credibilityScore}</strong><br/>
+                  {Math.round(result.score)}/100
+                </div>
+                <div className="trust-pill">
+                  <strong>{t.results.status}</strong><br/>
+                  {result.warning}
+                </div>
+                {result.source_score && (
+                  <div className="trust-pill">
+                    <strong>{t.results.sourceReliability}</strong><br/>
+                    {Math.round(result.source_score)}/100
                   </div>
-                  <span className="status status--review">Explainable AI</span>
-                </div>
+                )}
+              </div>
 
-                <div className="metric-grid">
-                  <article className="metric-card">
-                    <strong>{result ? `${result.score}%` : '--'}</strong>
-                    <span>Credibility score</span>
-                  </article>
-                  <article className="metric-card">
-                    <strong>{flaggedSentences.length}</strong>
-                    <span>Flagged sentences</span>
-                  </article>
-                  <article className="metric-card">
-                    <strong>{result?.fact_check_links?.length || 0}</strong>
-                    <span>Fact-check links</span>
-                  </article>
-                </div>
-
-                <div className="signal-box">
-                  <h4>Suspicious sentences</h4>
-                  {flaggedSentences.length ? (
-                    <ul>
-                      {flaggedSentences.map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="empty-state">
-                      Suspicious sentences will appear here after analysis.
-                    </p>
-                  )}
-                </div>
-
-                <div className="signal-box">
-                  <h4>Fact-check resources</h4>
-                  {result?.fact_check_links?.length ? (
-                    <ul className="links-list">
-                      {result.fact_check_links.map((link) => (
-                        <li key={link}>
-                          <a href={link} target="_blank" rel="noreferrer">
-                            {link}
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="empty-state">
-                      Fact-check links will appear here after analysis.
-                    </p>
-                  )}
+              {/* Progress bars */}
+              <div className="progress-section">
+                <div className="progress-item">
+                  <label>Credibility</label>
+                  <div className="progress-bar">
+                    <div className="progress-fill" style={{width: `${result.score}%`, backgroundColor: result.score > 60 ? '#10b981' : '#ef4444'}}></div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </section>
 
-          <section className="panel panel--history">
-            <div className="section-copy">
-              <span className="eyebrow">History</span>
-              <h2>Recent activity from MongoDB</h2>
-              <p>
-                Saved analysis results are fetched from your Flask backend and
-                rendered here inside the React dashboard.
-              </p>
-            </div>
-
-            <div className="history-list">
-              {historyLoading ? (
-                <div className="history-empty">Loading saved history...</div>
-              ) : history.length ? (
-                history.map((item) => (
-                  <article className="history-card" key={item.id}>
-                    <div className="history-card__top">
-                      <div>
-                        <h3>{item.warning}</h3>
-                        <p>{item.text_preview || item.input}</p>
-                      </div>
-                      <span
-                        className={`status ${
-                          item.score > 60 ? 'status--safe' : 'status--warn'
-                        }`}
-                      >
-                        {item.score}%
-                      </span>
+              {/* Suspicious Sentences */}
+              {result.suspicious_sentences && result.suspicious_sentences.length > 0 && (
+                <div className="signal-box nested">
+                  <h4>🚨 {t.results.suspicious_sentences}</h4>
+                  {result.suspicious_sentences.map((sentence, index) => (
+                    <div key={index} className="suspicious-item">
+                      <span className="warn-icon">⚠️</span>
+                      <p>{sentence}</p>
                     </div>
+                  ))}
+                </div>
+              )}
 
-                    <div className="history-card__footer">
-                      <span>{item.created_at || 'Saved result'}</span>
-                      <button
-                        className="button button--ghost button--small"
-                        onClick={() => handleDeleteHistory(item.id)}
-                      >
-                        Delete
-                      </button>
+              {/* Fact Check Resources */}
+              {result.fact_check_links && result.fact_check_links.length > 0 && (
+                <div className="fact-check-section">
+                  <h4>🔗 {t.results.fact_check}</h4>
+                  {result.fact_check_links.map((link, index) => (
+                    <div key={index} className="fact-link">
+                      <a href={link} target="_blank" rel="noopener noreferrer">
+                        {link} ↗
+                      </a>
                     </div>
-                  </article>
-                ))
-              ) : (
-                <div className="history-empty">
-                  No saved history found yet. Run your first analysis.
+                  ))}
                 </div>
               )}
             </div>
-          </section>
+          </div>
+        )}
 
-          <section className="panel panel--footer">
-            <div>
-              <span className="eyebrow">Integrated Product</span>
-              <h2>Plain frontend converted into a connected React application</h2>
-            </div>
-            <p>
-              Your project now has a React-based UI flow for input, result
-              rendering, suspicious sentence display, fact-check links, theme
-              toggling, and MongoDB history integration through the Flask API.
-            </p>
-          </section>
-        </main>
-      </div>
+        {!result && !error && (
+          <div className="empty-placeholder">
+            <p>{t.results.noResults}</p>
+          </div>
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer className="footer">
+        <div className="footer-grid">
+          <div>
+            <h3>{t.footer.about}</h3>
+            <p>{t.footer.aboutText}</p>
+          </div>
+          <div>
+            <h4>{t.footer.resources}</h4>
+            <ul>
+              <li><a href="https://www.snopes.com/" target="_blank" rel="noopener noreferrer">Snopes</a></li>
+              <li><a href="https://www.factcheck.org/" target="_blank" rel="noopener noreferrer">FactCheck.org</a></li>
+              <li><a href="https://www.reuters.com/fact-check/" target="_blank" rel="noopener noreferrer">Reuters</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4>{t.footer.legal}</h4>
+            <ul>
+              <li><a href="#privacy">{t.footer.privacy}</a></li>
+              <li><a href="#terms">{t.footer.terms}</a></li>
+              <li><a href="#contact">{t.footer.contact}</a></li>
+            </ul>
+          </div>
+        </div>
+        <div className="footer-bottom">
+          <p>&copy; 2024 Credibility Check. {t.footer.aboutText}</p>
+        </div>
+      </footer>
+
+      {/* Login Modal */}
+      <LoginModal
+        isOpen={showLogin}
+        onClose={() => setShowLogin(false)}
+        onLogin={handleLogin}
+      />
     </div>
   );
 }

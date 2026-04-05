@@ -9,6 +9,10 @@ from pymongo import MongoClient
 from transformers import pipeline
 
 from utils import check_source, extract_text, find_suspicious_sentences, load_roberta_model
+import auth
+
+
+
 
 load_dotenv()
 
@@ -43,14 +47,14 @@ def analyze_text(text):
     result = classifier(text[:512])
 
     if isinstance(result, list) and len(result) > 0:
-        scores = {r['label']: r['score'] for r in result}
-        fake_score = scores.get('FAKE', 0) or (1 - scores.get('REAL', 0.5))
-        return max(0, 100 * (1 - fake_score))
+        result = result[0]  # Get first result
+
+    # For sentiment analysis, map to fake news score
+    if result["label"] == "POSITIVE":
+        # Positive sentiment = likely credible
+        return 70 + result["score"] * 30
     else:
-        # Fallback sentiment
-        result = result[0] if isinstance(result, list) else result
-        if result["label"] == "POSITIVE":
-            return 70 + result["score"] * 30
+        # Negative sentiment = potentially fake
         return 30 - result["score"] * 30
 
 
@@ -87,7 +91,6 @@ def health():
 
 
 @app.route("/analyze", methods=["POST"])
-@jwt_required()
 def analyze():
     data = request.json or {}
     input_data = (data.get("input") or "").strip()
@@ -138,14 +141,59 @@ def analyze():
     )
 
 
+@app.route("/analyze_guest", methods=["POST"])
+def analyze_guest():
+    data = request.json or {}
+    input_data = (data.get("input") or "").strip()
+
+    if not input_data:
+        return jsonify({"error": "Input text or URL is required"}), 400
+
+    text, url = extract_text(input_data)
+
+    if not text:
+        return jsonify({"error": "Could not extract text"}), 400
+
+    nlp_score = analyze_text(text)
+    source_score = check_source(url)
+    suspicious_sentences = find_suspicious_sentences(text)
+
+    final_score = round((nlp_score * 0.7) + (source_score * 0.3), 2)
+
+    warning = "Credible ✅" if final_score > 60 else "Possibly Fake ⚠️"
+
+    return jsonify(
+        {
+            "score": final_score,
+            "warning": warning,
+            "source_score": source_score,
+            "source_url": url,
+            "suspicious_sentences": suspicious_sentences,
+            "fact_check_links": [
+                "https://www.snopes.com/",
+                "https://www.factcheck.org/",
+                "https://www.reuters.com/fact-check/",
+            ],
+        }
+    )
+
+
+@app.route("/login", methods=["POST"])
+def login():
+    return auth.login()
+
+@app.route("/register", methods=["POST"])
+def register():
+    return auth.register()
+
 @app.route("/history", methods=["GET"])
-@jwt_required()
+@auth.require_auth
 def get_history():
     items = history_collection.find().sort("created_at", -1).limit(20)
     return jsonify([serialize_history_item(item) for item in items])
 
-
 @app.route("/history/<history_id>", methods=["DELETE"])
+@auth.require_auth
 def delete_history(history_id):
     try:
         result = history_collection.delete_one({"_id": ObjectId(history_id)})
@@ -158,11 +206,10 @@ def delete_history(history_id):
     return jsonify({"message": "History item deleted successfully"})
 
 
-from auth import init_auth, init_db
-
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'super-secret-dev-key-change-in-prod')
+from auth import init_auth, init_db
 init_auth(app)
-init_db(mongo_client)
+init_db(mongo_client, app)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)

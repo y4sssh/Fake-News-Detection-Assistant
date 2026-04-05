@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+
 
 const LoginModal = ({ isOpen, onClose, onLogin }) => {
   const [isLogin, setIsLogin] = useState(true);
@@ -6,6 +7,8 @@ const LoginModal = ({ isOpen, onClose, onLogin }) => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const backdropRef = useRef(null);
 
   if (!isOpen) return null;
 
@@ -16,7 +19,8 @@ const LoginModal = ({ isOpen, onClose, onLogin }) => {
 
     try {
       const endpoint = isLogin ? '/login' : '/register';
-      const response = await fetch(`http://127.0.0.1:5000${endpoint}`, {
+      const apiUrl = `http://${window.location.hostname}:5000${endpoint}`;
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -28,7 +32,7 @@ const LoginModal = ({ isOpen, onClose, onLogin }) => {
         throw new Error(data.error || 'Authentication failed');
       }
 
-      onLogin(data.token);
+      onLogin();
       onClose();
     } catch (err) {
       setError(err.message);
@@ -37,9 +41,17 @@ const LoginModal = ({ isOpen, onClose, onLogin }) => {
     }
   };
 
+
+  const handleOverlayClick = (e) => {
+    if (e.target === backdropRef.current) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" ref={backdropRef} onClick={handleOverlayClick}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
+
         <button className="modal-close" onClick={onClose}>×</button>
         <h2>{isLogin ? 'Sign In' : 'Register'}</h2>
         
