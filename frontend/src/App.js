@@ -4,7 +4,7 @@ import LoginModal from './components/LoginModal';
 import { getTranslation } from './i18n';
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(true); // Auto-login enabled for all features
+  const [isLoggedIn, setIsLoggedIn] = useState(false); // Allow testing login functionality
   const [showLogin, setShowLogin] = useState(false);
   const [input, setInput] = useState('');
   const [result, setResult] = useState(null);
@@ -167,9 +167,18 @@ function App() {
             📋 {history.length}
           </button>
           <div className="user-status">
-            <button onClick={() => setShowLogin(true)} className="login-btn">
-              {t.buttons.login || 'Sign In'}
-            </button>
+            {isLoggedIn ? (
+              <div>
+                <span>✓ Signed in</span>
+                <button onClick={handleLogout} className="logout-btn">
+                  {t.buttons.logout}
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setShowLogin(true)} className="login-btn">
+                {t.buttons.login}
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -254,9 +263,11 @@ function App() {
             </div>
           </div>
 
-          <p className="guest-note">
-            <em>✨ All features unlocked and active</em>
-          </p>
+          {!isLoggedIn && (
+            <p className="guest-note">
+              <em>🔓 {t.messages.guestMode}</em>
+            </p>
+          )}
         </div>
 
         {/* Error Message */}

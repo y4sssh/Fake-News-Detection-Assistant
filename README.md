@@ -1,113 +1,118 @@
-# Fake News Detection Assistant 📰🔍
+# Fake News Detection Assistant
 
-[![Backend Status](http://127.0.0.1:5000/health)](http://127.0.0.1:5000/health)
-[![Frontend](http://127.0.0.1:3000)](http://127.0.0.1:3000)
+A modern AI-powered web app to detect fake news using natural language analysis, source credibility scoring, and suspicious sentence detection.
 
-AI-powered web app to detect fake news using ML credibility scoring, source analysis, suspicious sentence detection, with React UI and MongoDB history.
+## Overview
 
-## ✨ Features
+This repository includes a React frontend and a Flask backend that work together to identify potentially misleading or fake content. It supports text and URL analysis, presents a credibility score, and surfaces explainable signals like source reliability and suspicious phrasing.
 
-- **Live Credibility Preview & Analyzer**: Paste text/link/headline for instant score (0-100)
-- **Prediction & Misinformation Detection**: \"Credible ✅\" or \"Possibly Fake ⚠️\"
-- **Explainable AI**: Source score, flagged suspicious sentences, fact-check links
-- **Backend Status**: Health check (Mongo connected/disconnected)
-- **History**: Recent analyses saved/retrieved from MongoDB (20 latest, delete)
-- **React UI**: Modern interface with theme toggle, metrics, history dashboard
+## Key Features
 
-## 🏗️ Architecture
+- **Fast credibility scoring**: Evaluate text or URLs with a score from 0 to 100.
+- **Explainable output**: See source reliability, suspicious sentences, and fact-check references.
+- **React dashboard**: Clean UI with theme toggle, language selector, and history panel.
+- **Authentication-ready**: Login/register flow with JWT authentication.
+- **History persistence**: Save recent analyses for later review.
+- **Health monitoring**: Backend health endpoint to check service status.
 
+## Tech Stack
+
+- Frontend: React, `react-scripts`, CSS styling
+- Backend: Flask, `flask-cors`, `flask-jwt-extended`
+- Machine learning: HuggingFace Transformers, Torch
+- Data extraction: `newspaper3k`, `validators`
+- Persistence: MongoDB via PyMongo
+
+## Architecture
+
+```text
+Frontend (React)
+    |
+Backend (Flask API, ML, auth)
+    |
+MongoDB (history storage)
 ```
-Frontend (React) → Backend (Flask + Transformers + Torch) → MongoDB (History)
-                          ↓
-                    newspaper3k (URL extract)
-                    validators (URL check)
-```
 
-## 🚀 Quick Start
+## Getting Started
 
 ### Prerequisites
-- Python 3.12+
-- Node.js
-- Docker (MongoDB)
 
-### Backend (http://localhost:5000)
+- Python 3.10+ (3.12 preferred)
+- Node.js 18+ / npm
+- MongoDB (local or Docker)
+
+### Clone the repository
+
 ```bash
-cd fake-news-ai/backend
+git clone https://github.com/y4sssh/Fake-News-Detection-Assistant.git
+cd Fake-News-Detection-Assistant
+```
+
+### Backend setup
+
+```bash
+cd backend
 python -m venv venv
-.venv/Scripts/Activate.ps1  # Windows
+venv\Scripts\Activate.ps1   # Windows PowerShell
+# or: venv\Scripts\activate.bat   # Windows CMD
 pip install -r requirements.txt
 python app.py
 ```
 
-Test:
-```bash
-curl http://localhost:5000/health
-curl -X POST -H "Content-Type: application/json" -d "{\"input\": \"Shocking miracle!\"}" http://localhost:5000/analyze
-```
+The backend starts on `http://localhost:5000`.
 
-### Frontend (http://localhost:3000)
+### Frontend setup
+
 ```bash
-cd fake-news-ai/frontend
+cd ../frontend
 npm install
 npm start
 ```
 
-### MongoDB (History)
+The frontend starts on `http://localhost:3000`.
+
+### Optional: Run MongoDB with Docker
+
 ```bash
 docker run -d -p 27017:27017 --name fake-news-mongo mongo:latest
 ```
 
-## 📋 API Endpoints
+## API Endpoints
 
 | Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | Welcome |
-| `/health` | GET | Status (Mongo ping) |
-| `/analyze` | POST `{input: str}` | Analyze text/URL |
-| `/history` | GET | Recent 20 analyses |
-| `/history/:id` | DELETE | Delete item |
+|---|---|---|
+| `/` | GET | Base API status |
+| `/health` | GET | Backend + MongoDB health check |
+| `/analyze` | POST | Analyze text/URL (authenticated) |
+| `/analyze_guest` | POST | Analyze text/URL without login |
+| `/login` | POST | Authenticate user |
+| `/register` | POST | Register new user |
+| `/history` | GET | Retrieve analysis history |
+| `/history/<id>` | DELETE | Remove history entry |
 
-## 🔧 Tech Stack
+## Usage
 
-- **Frontend**: React, Tailwind-like CSS
-- **Backend**: Flask, CORS
-- **ML**: HuggingFace Transformers (sentiment), Torch
-- **Extract**: newspaper3k
-- **DB**: MongoDB + PyMongo
-- **Utils**: validators, suspicious keywords
+1. Open the React app in your browser.
+2. Enter text or paste a URL into the analyzer.
+3. Click **Analyze** to view credibility score and indicators.
+4. Use the history panel to revisit previous analyses.
+5. Toggle between light/dark mode and change language as needed.
 
-## 🤖 How Analyzer Works
+## Troubleshooting
 
-1. Extract text from URL/text (newspaper3k)
-2. NLP score: Sentiment pipeline (positive → credible)
-3. Source score: Trusted domains (BBC, Reuters...)
-4. Suspicious sentences: Keyword match (shocking, miracle...)
-5. Final score = 0.7*NLP + 0.3*source
-6. Save history MongoDB
+- If `npm start` reports port 3000 in use, run with another port:
+  ```bash
+  npm start -- --port 3001
+  ```
+- If MongoDB is disconnected, start it with Docker or connect your own MongoDB instance.
+- The first model load may take time while Transformers downloads the model weights.
 
-## 📱 Demo UI
+## Notes
 
-- Hero: Theme toggle, Analyze button
-- Analyzer: Paste input, run detection, metrics cards, suspicious list
-- History: Recent cards with delete
-- Backend Status: Waiting → Connected
+- History persistence depends on MongoDB.
+- Guest analysis works without login.
+- Authentication is implemented with JWT tokens.
 
-## 🐛 Troubleshooting
-
-- Mongo disconnected: Run Docker container
-- Transformers slow first run: Downloads ~500MB model
-- Port busy: npm start --port 3001
-- Windows venv: Set-ExecutionPolicy RemoteSigned
-
-## 🚀 Next Steps (TODO.md)
-
-✅ RoBERTa ML + expanded sources (Phase 1 done)
-- [ ] User auth (JWT)
-- [ ] Screenshot badges (Vision API)
-- [ ] Mongo Atlas full guide
-
-See TODO.md for progress.
-
-## 📄 License
+## License
 
 MIT
